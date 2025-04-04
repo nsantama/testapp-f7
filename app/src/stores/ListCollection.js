@@ -1,24 +1,32 @@
 import { defineStore } from "pinia";
+import { database } from "@/firebaseConfig";
+import { ref, onValue, set, get, push } from "firebase/database";
 
 export const useListCollectionStore = defineStore("listCollection", {
   state: () => ({
     listCollection: [],
   }),
   actions: {
-    fetchListCollectionData() {
+    async fetchListCollectionData() {
       console.log("Fetching list collection data...");
-      this.listCollection = [
-        { id: '1', name: "List 1" },
-        { id: '2', name: "List 2" },
-        { id: '3', name: "List 3" },
-      ];
+      const databaseRef = ref(database, "/");
+      const listCollectionData = await get(databaseRef);
+      console.log("List collection data:", listCollectionData.val());
+      this.listCollection = Object.entries(listCollectionData.val()).map(([key, value]) => ({
+        id: key,
+        ...value,
+      }));
     },
-    createList(listName) {
+    async createListCollection(listName) {
       const newList = {
-        id: (this.listCollection.length + 1).toString(),
         name: listName,
+        description: '',
+        tasks: [],
       };
-      this.listCollection.push(newList);
+      const databaseRef = ref(database, "/");
+      const newListRef = push(databaseRef);
+      set(newListRef, newList);
+      this.fetchListCollectionData();
     }
   },
 });

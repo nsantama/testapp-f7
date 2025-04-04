@@ -1,5 +1,7 @@
 import { defineStore } from "pinia";
 import { useListCollectionStore } from "./ListCollection.js";
+import { database } from "@/firebaseConfig";
+import { ref, onValue, set, get, push } from "firebase/database";
 
 export const useListStore = defineStore("toDoList", {
 	state: () => ({
@@ -8,13 +10,23 @@ export const useListStore = defineStore("toDoList", {
     activeListId: null,
 	}),
 	actions: {
-		fetchListData() {
+		async fetchListData() {
       // Filtrar para eliminar los elementos eliminados
-			this.toDoList = [
-				{ id: '1', name: "List 1", description: "none", completed: false, tags: ['test'], deadline: Date.now(), creation: Date.now(), deleted: false },
-        { id: '2', name: "List 2", description: "none", completed: true, tags: ['test'], deadline: Date.now(), creation: Date.now(), deleted: false },
-        { id: '3', name: "List 3", description: "none", completed: false, tags: ['test'], deadline: Date.now(), creation: Date.now(), deleted: false },
-			];
+      if (!this.activeListId) return; // No active list selected
+      const databaseRef = ref(database, `/${this.activeListId}/tasks`);
+      console.log("Fetching list data from Firebase...");
+      if (!databaseRef) return; // No database reference available
+      const listData = await get(databaseRef);
+      if (!listData.exists()) {
+        console.log("No data available for this list.");
+        this.toDoList = []; // Reset toDoList if no data is found
+        return;
+      }
+      console.log("List collection data:", listData.val());
+      this.toDoList = Object.entries(listData.val()).map(([key, value]) => ({
+        id: key,
+        ...value,
+      }));
 		},
     updateActiveList(listId) {
       this.activeListId = listId;
@@ -29,7 +41,6 @@ export const useListStore = defineStore("toDoList", {
     },
     createNewTask(taskName) {
       const newTask = {
-        id: (this.toDoList.length + 1).toString(),
         name: taskName,
         description: "none",
         completed: false,
@@ -38,18 +49,26 @@ export const useListStore = defineStore("toDoList", {
         creation: Date.now(),
         deleted: false,
       };
-      this.toDoList.push(newTask);
+      // this.toDoList.push(newTask);
+      const databaseRef = ref(database, `/${this.activeListId}/tasks`);
+      const newTaskRef = push(databaseRef);
+      set(newTaskRef, newTask);
+      this.fetchListData();
     },
     removeTask(taskId) {
       const taskIndex = this.toDoList.findIndex(task => task.id === taskId);
       if (taskIndex !== -1) {
         this.toDoList[taskIndex].deleted = true; // Mark as deleted instead of removing
+        const databaseRef = ref(database, `/${this.activeListId}/tasks/${taskId}`);
+        set(databaseRef, this.toDoList[taskIndex]);
       }
     },
-    updateTaskCompletition(taskId, completed) {
+    updateTaskCompletion(taskId, completed) {
       const taskIndex = this.toDoList.findIndex(task => task.id === taskId);
       if (taskIndex !== -1) {
         this.toDoList[taskIndex].completed = completed;
+        const databaseRef = ref(database, `/${this.activeListId}/tasks/${taskId}`);
+        set(databaseRef, this.toDoList[taskIndex]);
       }
     }
 	}

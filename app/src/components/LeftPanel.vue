@@ -8,7 +8,7 @@
           round
           small
           color="blue"
-          @click="LoadLists"
+          @click="loadLists"
           >Load Lists</f7-button>
       </f7-block>
 			<f7-block>
@@ -35,7 +35,7 @@
 					round
 					small
 					color="green"
-          @click="CreateNewList"
+          @click="createNewListCollection"
 					>Create new list</f7-button>
           <!-- Open pop up para crear nueva categoria -->
 			</f7-block>
@@ -51,18 +51,21 @@ import { useListStore } from '@/stores/ToDoList';
 export default {
 	name: 'LeftPanel',
 	methods: {
-    LoadLists() {
+    loadLists() {
       // Call the store action to load lists
       this.listCollectionStore.fetchListCollectionData()
     },
-    CreateNewList() {
+    createNewListCollection() {
       if (!this.newListName) {
         f7.dialog.alert('Please enter a list name.', 'Error');
         return;
       }
-      this.listCollectionStore.createList(this.newListName);
+      this.listCollectionStore.createListCollection(this.newListName);
     },
 	},
+  mounted() {
+    this.loadLists();
+  },
 	data() {
 		return {};
 	},
